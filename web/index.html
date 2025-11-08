@@ -1,0 +1,2344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>West Bengal Interactive Tourism Map</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <style>
+    :root {
+      --primary: #2563eb; 
+      --primary-dark: #1d4ed8;
+      --secondary: #f59e0b;
+      --dark: #0f172a;
+      --dark-light: #1e293b;
+      --text: #f8fafc;
+      --text-light: #cbd5e1;
+      --border: #334155;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+      --radius: 12px;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background-color: var(--dark);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    
+    /* Background with gradient */
+    .background-gradient {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, var(--dark) 0%, #1e1b4b 100%);
+      z-index: -2;
+    }
+    
+    .background-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%232563eb' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      z-index: -1;
+    }
+    
+    /* Main layout */
+    .app-container {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      padding: 24px;
+      height: 100vh;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    
+    /* Side panel */
+    .side-panel {
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .logo {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 20px;
+    }
+    
+    .brand-text h1 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    
+    .brand-text p {
+      font-size: 14px;
+      color: var(--text-light);
+    }
+    
+    .search-container {
+      display: flex;
+      gap: 12px;
+    }
+    
+    .search-input {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text);
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+    
+    .search-btn, .locate-btn {
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      background: var(--primary);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    
+    .search-btn:hover, .locate-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+    
+    .filters-section {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .filter-chip {
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      color: var(--text-light);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .filter-chip:hover {
+      background: rgba(37, 99, 235, 0.1);
+      border-color: var(--primary);
+      color: var(--text);
+    }
+    
+    .filter-chip.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+    
+    /* Routing Section Styles */
+    .routing-section {
+      background: rgba(15, 23, 42, 0.4);
+      border-radius: 10px;
+      padding: 16px;
+      border: 1px solid var(--border);
+    }
+    
+    .input-group {
+      margin-bottom: 16px;
+      position: relative;
+    }
+    
+    .input-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text-light);
+    }
+    
+    .input-with-button {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .route-input {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text);
+      font-size: 14px;
+      transition: all 0.2s;
+      padding-right: 36px;
+    }
+    
+    .route-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+    
+    .locate-input-btn {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text-light);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .locate-input-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    .clear-input-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-light);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    
+    .clear-input-btn:hover {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+    }
+    
+    .route-calculate-btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      background: var(--primary);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 600;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+    }
+    
+    .route-calculate-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+    
+    .route-calculate-btn:disabled {
+      background: var(--border);
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .route-clear-btn {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-light);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .route-clear-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      border-color: #ef4444;
+    }
+    
+    /* Enhanced popup with routing */
+    .enhanced-popup {
+      min-width: 280px;
+    }
+    
+    .popup-routing {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .popup-routing-btn {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--primary);
+      background: transparent;
+      color: var(--primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .popup-routing-btn:hover {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .poi-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    
+    .poi-card {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .poi-card:hover {
+      background: rgba(37, 99, 235, 0.1);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+    
+    .poi-image {
+      width: 80px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    
+    .poi-content {
+      flex: 1;
+    }
+    
+    .poi-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .poi-desc {
+      font-size: 13px;
+      color: var(--text-light);
+      margin-bottom: 6px;
+    }
+    
+    .poi-district {
+      font-size: 12px;
+      color: var(--secondary);
+      font-weight: 500;
+    }
+    
+    /* Map container */
+    .map-container {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Compact Route Preview Panel */
+    .route-preview-container {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 320px;
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      z-index: 1000;
+      display: none;
+    }
+
+    .route-preview-container.active {
+      display: block;
+    }
+
+    .route-preview-container h4 {
+      margin-bottom: 12px;
+      font-size: 16px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .route-close-btn {
+      background: none;
+      border: none;
+      color: var(--text-light);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    
+    .route-close-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .travel-modes {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .travel-mode {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: rgba(15, 23, 42, 0.4);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+    
+    .travel-mode:hover {
+      background: rgba(37, 99, 235, 0.1);
+      border-color: var(--primary);
+    }
+    
+    .travel-mode-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .travel-mode-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+    }
+    
+    .travel-mode-name {
+      font-size: 14px;
+      color: var(--text);
+    }
+    
+    .travel-mode-details {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+    
+    .travel-mode-time {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    
+    .travel-mode-distance {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+
+    .route-preview {
+      width: 100%;
+      height: 150px;
+      background: var(--dark-light);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .route-preview-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-light);
+      text-align: center;
+      padding: 20px;
+    }
+
+    .route-preview-placeholder svg {
+      margin-bottom: 10px;
+      opacity: 0.5;
+    }
+
+    .route-preview-map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .route-preview-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .route-preview-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text-light);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .route-preview-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    /* Share modal */
+    .share-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .share-modal.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .share-modal-content {
+      background: var(--dark-light);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    
+    .share-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .share-modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    
+    .share-modal-close {
+      background: none;
+      border: none;
+      color: var(--text-light);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    
+    .share-modal-close:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .share-options {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .share-option {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: rgba(15, 23, 42, 0.4);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .share-option:hover {
+      background: rgba(37, 99, 235, 0.1);
+      border-color: var(--primary);
+    }
+    
+    .share-option-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: rgba(37, 99, 235, 0.2);
+      color: var(--primary);
+    }
+    
+    .share-option-text {
+      font-size: 12px;
+      color: var(--text-light);
+      text-align: center;
+    }
+    
+    .share-url-container {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .share-url-input {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text);
+      font-size: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .share-url-copy {
+      padding: 10px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--primary);
+      background: var(--primary);
+      color: white;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .share-url-copy:hover {
+      background: var(--primary-dark);
+    }
+    
+    .share-url-copy.copied {
+      background: #10b981;
+      border-color: #10b981;
+    }
+    
+    /* Custom popup style */
+    .leaflet-popup-content-wrapper {
+      background: var(--dark-light);
+      color: var(--text);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+    }
+    
+    .leaflet-popup-content {
+      margin: 12px 16px;
+      line-height: 1.5;
+    }
+    
+    .leaflet-popup-tip {
+      background: var(--dark-light);
+    }
+    
+    /* Marker pulse animation */
+    .pulse-marker {
+      width: 20px;
+      height: 20px;
+      margin-left: -10px;
+      margin-top: -10px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 0 rgba(37, 99, 235, 0.7);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 15px rgba(37, 99, 235, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+      }
+    }
+    
+    /* Custom marker cluster styles */
+    .marker-cluster-small {
+      background-color: rgba(37, 99, 235, 0.6) !important;
+    }
+    .marker-cluster-small div {
+      background-color: rgba(37, 99, 235, 0.8) !important;
+      color: white !important;
+    }
+    
+    .marker-cluster-medium {
+      background-color: rgba(245, 158, 11, 0.6) !important;
+    }
+    .marker-cluster-medium div {
+      background-color: rgba(245, 158, 11, 0.8) !important;
+      color: white !important;
+    }
+    
+    .marker-cluster-large {
+      background-color: rgba(239, 68, 68, 0.6) !important;
+    }
+    .marker-cluster-large div {
+      background-color: rgba(239, 68, 68, 0.8) !important;
+      color: white !important;
+    }
+    
+    /* Loading spinner */
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Address suggestions dropdown */
+    .address-suggestions {
+      position: absolute;
+      z-index: 1000;
+      width: calc(100% - 40px);
+      max-height: 200px;
+      overflow-y: auto;
+      background: var(--dark-light);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: var(--shadow);
+      margin-top: 2px;
+    }
+    
+    .address-suggestion {
+      padding: 10px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    
+    .address-suggestion:hover {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .address-suggestion:last-child {
+      border-bottom: none;
+    }
+    
+    /* Notification animations */
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    @keyframes slideInDown {
+      from { transform: translate(-50%, -100%); opacity: 0; }
+      to { transform: translate(-50%, 0); opacity: 1; }
+    }
+    
+    @keyframes slideOutUp {
+      from { transform: translate(-50%, 0); opacity: 1; }
+      to { transform: translate(-50%, -100%); opacity: 0; }
+    }
+    
+    /* Responsive design */
+    @media (max-width: 1024px) {
+      .app-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        gap: 16px;
+        padding: 16px;
+      }
+      
+      .side-panel {
+        max-height: 40vh;
+      }
+      
+      .route-preview-container {
+        position: relative;
+        top: auto;
+        right: auto;
+        width: 100%;
+        margin-top: 16px;
+      }
+    }
+    
+    @media (max-width: 640px) {
+      .app-container {
+        padding: 12px;
+      }
+      
+      .side-panel {
+        padding: 16px;
+      }
+      
+      .search-container {
+        flex-direction: column;
+      }
+      
+      .search-btn, .locate-btn {
+        width: 100%;
+      }
+      
+      .route-preview-container {
+        width: calc(100% - 32px);
+        left: 16px;
+        right: 16px;
+      }
+    }
+    
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.3);
+      border-radius: 3px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--primary);
+      border-radius: 3px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--primary-dark);
+    }
+  </style>
+</head>
+<body>
+  <div class="background-gradient"></div>
+  <div class="background-overlay"></div>
+  
+  <div class="app-container">
+    <div class="side-panel">
+      <div class="brand-section">
+        <div class="logo">WB</div>
+        <div class="brand-text">
+          <h1>West Bengal Tourism</h1>
+          <p>Interactive map of heritage, nature & culture</p>
+        </div>
+      </div>
+      
+      <div class="search-container">
+        <input type="text" class="search-input" id="searchBox" placeholder="Search places or districts...">
+        <button class="search-btn" id="searchBtn" title="Search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 21L16.514 16.506L21 21ZM19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="locate-btn" id="locateBtn" title="Go to my location">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="filters-section">
+        <div class="filter-chip active" data-filter="all">All Places</div>
+        <div class="filter-chip" data-filter="heritage">Heritage</div>
+        <div class="filter-chip" data-filter="nature">Nature</div>
+        <div class="filter-chip" data-filter="hill">Hill Stations</div>
+        <div class="filter-chip" data-filter="beach">Beaches</div>
+        <div class="filter-chip" data-filter="religious">Religious</div>
+      </div>
+      
+      <!-- Routing Section -->
+      <div class="routing-section">
+        <h3 style="margin-bottom: 12px; font-size: 16px; color: var(--text);">Route Planner</h3>
+        
+        <div class="route-inputs">
+          <div class="input-group">
+            <label>From (Your Location)</label>
+            <div class="input-with-button">
+              <input type="text" class="route-input" id="routeFrom" placeholder="Current location or address">
+              <button class="clear-input-btn" id="clearFromBtn" title="Clear" style="display: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <button class="locate-input-btn" id="locateFromBtn" title="Use my location">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2"/>
+                  <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <div class="input-group">
+            <label>To (Destination)</label>
+            <div class="input-with-button">
+              <input type="text" class="route-input" id="routeTo" placeholder="Search destination...">
+              <button class="clear-input-btn" id="clearToBtn" title="Clear" style="display: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <button class="route-calculate-btn" id="findRouteBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            <span>Find Route</span>
+          </button>
+          
+          <button class="route-clear-btn" id="clearRoute" style="display: none;">
+            Clear Route
+          </button>
+        </div>
+      </div>
+      
+      <div class="poi-list" id="poiList">
+        <!-- POI list will be populated by JavaScript -->
+      </div>
+    </div>
+    
+    <div class="map-container">
+      <div id="map"></div>
+      
+      <!-- Compact Route Preview Panel -->
+      <div class="route-preview-container" id="routePreviewContainer">
+        <h4>
+          Route Preview
+          <button class="route-close-btn" id="closeRoutePreview" title="Close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </h4>
+        
+        <div class="travel-modes" id="travelModes">
+          <!-- Travel modes will be populated here -->
+        </div>
+        
+        <div class="route-preview" id="routePreview">
+          <div class="route-preview-placeholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z" fill="currentColor"/>
+            </svg>
+            <p>Route preview will appear here after calculation</p>
+          </div>
+        </div>
+        <div class="route-preview-actions">
+          <button class="route-preview-btn" id="shareRouteBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 8C19.6569 8 21 6.65685 21 5C21 3.34315 19.6569 2 18 2C16.3431 2 15 3.34315 15 5C15 6.65685 16.3431 8 18 8Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M6 15C7.65685 15 9 13.6569 9 12C9 10.3431 7.65685 9 6 9C4.34315 9 3 10.3431 3 12C3 13.6569 4.34315 15 6 15Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M18 22C19.6569 22 21 20.6569 21 19C21 17.3431 19.6569 16 18 16C16.3431 16 15 17.3431 15 19C15 20.6569 16.3431 22 18 22Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M8.58984 13.5098L15.4198 17.4898" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M15.4098 6.50977L8.58984 10.4898" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Share
+          </button>
+          <button class="route-preview-btn" id="openInMapsBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21 10C21 17 12 23 12 23C12 23 3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.364 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            Google Maps
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share Route Modal -->
+  <div class="share-modal" id="shareModal">
+    <div class="share-modal-content">
+      <div class="share-modal-header">
+        <h3 class="share-modal-title">Share Route</h3>
+        <button class="share-modal-close" id="closeShareModal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="share-options">
+        <div class="share-option" id="shareWhatsApp">
+          <div class="share-option-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893 0-3.176-1.24-6.165-3.495-8.411"/>
+            </svg>
+          </div>
+          <span class="share-option-text">WhatsApp</span>
+        </div>
+        
+        <div class="share-option" id="shareFacebook">
+          <div class="share-option-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18.77 7.46H14.5v-1.9c0-.9.6-1.1 1-1.1h3V.5h-4.33C10.24.5 9.5 3.44 9.5 5.32v2.15h-3v4h3v12h5v-12h3.85l.42-4z"/>
+            </svg>
+          </div>
+          <span class="share-option-text">Facebook</span>
+        </div>
+        
+        <div class="share-option" id="shareTwitter">
+          <div class="share-option-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M23.443 4.834c-.835.37-1.732.62-2.675.733a4.67 4.67 0 0 0 2.048-2.578 9.3 9.3 0 0 1-2.958 1.13 4.66 4.66 0 0 0-7.938 4.25 13.229 13.229 0 0 1-9.602-4.868c-.4.69-.63 1.49-.63 2.342A4.66 4.66 0 0 0 3.96 9.824a4.647 4.647 0 0 1-2.11-.583v.06a4.66 4.66 0 0 0 3.737 4.568 4.692 4.692 0 0 1-2.104.08 4.661 4.661 0 0 0 4.352 3.234 9.348 9.348 0 0 1-5.786 1.995 9.5 9.5 0 0 1-1.112-.065 13.175 13.175 0 0 0 7.14 2.093c8.57 0 13.255-7.098 13.255-13.254 0-.2-.005-.402-.014-.602a9.47 9.47 0 0 0 2.323-2.41l.002-.003z"/>
+            </svg>
+          </div>
+          <span class="share-option-text">Twitter</span>
+        </div>
+      </div>
+      
+      <div class="share-url-container">
+        <input type="text" class="share-url-input" id="shareUrlInput" readonly>
+        <button class="share-url-copy" id="copyShareUrl">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster-src.js"></script>
+
+  <script>
+    // Enhanced sample POIs for West Bengal with district information
+const POIS = [
+    {id:1,name:"Victoria Memorial, Kolkata",lat:22.5448,lng:88.3426,cat:"heritage",desc:"Iconic white-marble monument and museum in Kolkata.",img:"Victoria_Memorial.webp",district:"Kolkata"},
+    {id:2,name:"Darjeeling - Tiger Hill",lat:27.0043,lng:88.2586,cat:"hill",desc:"Sunrise viewpoint with Kanchenjunga panorama.",img:"Tiger_Hill.webp",district:"Darjeeling"},
+    {id:3,name:"Sundarbans National Park",lat:21.9497,lng:88.8903,cat:"nature",desc:"Largest mangrove forest—Royal Bengal Tigers & rich biodiversity.",img:"Sundarbans_National_Park.jpg",district:"South 24 Parganas"},
+    {id:4,name:"Hazarduari Palace, Murshidabad",lat:24.1850,lng:88.2655,cat:"heritage",desc:"Grand Nawabi palace with a thousand doors.",img:"Hazarduari_Palace.webp",district:"Murshidabad"},
+    {id:5,name:"Shantiniketan (Bolpur)",lat:23.6846,lng:87.6804,cat:"heritage",desc:"Tagore's university town — culture, festivals, art.",img:"Shantiniketan.webp",district:"Birbhum"},
+    {id:6,name:"Digha Beach",lat:21.6346,lng:87.5008,cat:"beach",desc:"Popular seaside resort with long sandy beaches.",img:"Digha.webp",district:"Purba Medinipur"},
+    {id:7,name:"Dakshineswar Kali Temple",lat:22.6009,lng:88.3634,cat:"religious",desc:"Famous 19th-century Kali temple on the Hooghly river.",img:"https://upload.wikimedia.org/wikipedia/commons/2/20/Dakshineswar_Kali_Temple.jpg",district:"North 24 Parganas"},
+    {id:8,name:"Kalimpong",lat:27.0593,lng:88.4719,cat:"hill",desc:"Scenic hill station with Buddhist monasteries.",img:"https://upload.wikimedia.org/wikipedia/commons/6/6c/Kalimpong_Town.jpg",district:"Kalimpong"},
+    {id:9,name:"Bishnupur",lat:23.0731,lng:87.3197,cat:"heritage",desc:"Famous for terracotta temples and Baluchari sarees.",img:"https://upload.wikimedia.org/wikipedia/commons/4/4b/Rasmancha%2C_Bishnupur.jpg",district:"Bankura"},
+    {id:10,name:"Jaldapara National Park",lat:26.6175,lng:89.3758,cat:"nature",desc:"Wildlife sanctuary famous for Indian rhinoceros.",img:"https://upload.wikimedia.org/wikipedia/commons/e/e3/Jaldapara_Rhino.jpg",district:"Alipurduar"},
+    {id:11,name:"Science City, Kolkata",lat:22.5605,lng:88.3889,cat:"heritage",desc:"Large science museum and popular tourist attraction.",img:"https://upload.wikimedia.org/wikipedia/commons/3/3d/Science_City_Kolkata.jpg",district:"Kolkata"},
+    {id:12,name:"Howrah Bridge",lat:22.5853,lng:88.3472,cat:"heritage",desc:"Iconic cantilever bridge over the Hooghly River.",img:"https://upload.wikimedia.org/wikipedia/commons/6/6c/Howrah_Bridge_2017.jpg",district:"Howrah"},
+    {id:13,name:"Cooch Behar Palace",lat:26.3236,lng:89.4542,cat:"heritage",desc:"Inspired by Buckingham Palace, built by Maharaja Nripendra Narayan.",img:"https://upload.wikimedia.org/wikipedia/commons/4/4f/Cooch_Behar_Palace_2012.jpg",district:"Cooch Behar"},
+    {id:14,name:"Gorumara National Park",lat:26.7000,lng:88.8000,cat:"nature",desc:"Famous for Indian rhinoceros and rich biodiversity.",img:"Gorumara_National_Park.webp",district:"Jalpaiguri"},
+    {id:15,name:"Malancha Beach",lat:21.6000,lng:87.6000,cat:"beach",desc:"Beautiful beach near Digha with red crabs.",img:"https://upload.wikimedia.org/wikipedia/commons/b/b5/Malancha_Beach.jpg",district:"Purba Medinipur"},
+    {id:16,name:"Mandarmani Beach",lat:21.667091,lng:87.705571,cat:"beach",desc:"Long, motorable beach with water sports and resorts.",img:"https://upload.wikimedia.org/wikipedia/commons/5/5a/Mandarmani_Beach.jpg",district:"Purba Medinipur"},
+    {id:17,name:"Bakkhali Beach",lat:21.566,lng:88.267,cat:"beach",desc:"Seaside resort in South 24 Parganas known for its tranquil environment.",img:"https://upload.wikimedia.org/wikipedia/commons/0/0c/Bakkhali_Beach.jpg",district:"South 24 Parganas"},
+    {id:18,name:"Tajpur Beach",lat:21.650,lng:87.650,cat:"beach",desc:"Secluded beach known for red crabs and adventure sports.",img:"https://upload.wikimedia.org/wikipedia/commons/2/2c/Tajpur_Beach.jpg",district:"Purba Medinipur"},
+    {id:19,name:"Shankarpur Beach",lat:21.637688,lng:87.580267,cat:"beach",desc:"Twin beach to Digha, a clean and less crowded fishing harbour.",img:"https://upload.wikimedia.org/wikipedia/commons/4/4f/Shankarpur_Beach.jpg",district:"Purba Medinipur"},
+    {id:20,name:"Udaypur Sea Beach",lat:21.600,lng:87.600,cat:"beach",desc:"Known for fresh fish and a quiet atmosphere.",img:"https://upload.wikimedia.org/wikipedia/commons/8/8b/Udaypur_Beach.jpg",district:"Purba Medinipur"},
+    {id:21,name:"Jhargram Raj Palace",lat:22.432975,lng:86.995757,cat:"heritage",desc:"Early 20th-century royal palace showcasing a blend of Italian and Islamic architecture.",img:"JHARGRAM_ROYEL_PALACE.jpg",district:"Jhargram"},
+    {id:22,name:"Bara Sona Masjid",lat:24.882940,lng:88.128002,cat:"heritage",desc:"16th-century large stone mosque built by Sultan Nasiruddin Nusrat Shah with golden gilding.",img:"BARA_SONA_MASJID.jpg",district:"Malda"},
+    {id:23,name:"Belur Math",lat:22.632325,lng:88.356516,cat:"heritage",desc:"Headquarters of Ramakrishna Math and Mission, known for its unique architecture blending temple, church, and mosque styles.",img:"https://upload.wikimedia.org/wikipedia/commons/8/8f/Belur_math_1.jpg",district:"Howrah"},
+    {id:24,name:"Eklakhi Tomb",lat:25.138876,lng:88.154371,cat:"heritage",desc:"15th-century mausoleum considered the earliest example of Bengali Muslim architecture with octagonal design.",img:"https://upload.wikimedia.org/wikipedia/commons/8/8e/Eklakhi_Mausoleum%2C_Pandua.jpg",district:"Malda"},
+    {id:25,name:"Nashirpur Palace Rajbari",lat:24.206972,lng:88.263241,cat:"heritage",desc:"Historic palace showcasing the grandeur of Nawabi architecture in Murshidabad.",img:"https://upload.wikimedia.org/wikipedia/commons/d/d3/Murshidabad_Palace.jpg",district:"Murshidabad"},
+    {id:26,name:"Kumartuli",lat:22.599998,lng:88.361266,cat:"heritage",desc:"Traditional potters' quarter famous for crafting Durga idols and other religious sculptures.",img:"https://upload.wikimedia.org/wikipedia/commons/8/8b/Kumartuli_Durga_Idol_Making.jpg",district:"Kolkata"},
+    {id:27,name:"Shrine of Ata Shah",lat:25.400989,lng:88.531469,cat:"heritage",desc:"Sufi shrine dedicated to Ata Shah, a revered spiritual figure in Bengal.",img:"https://upload.wikimedia.org/wikipedia/commons/5/5a/Sufi_Shrine_West_Bengal.jpg",district:"Malda"},
+    {id:28,name:"Jorasanko Thakurbari",lat:22.583971,lng:88.362005,cat:"heritage",desc:"Ancestral home of the Tagore family, now Rabindra Bharati Museum dedicated to Rabindranath Tagore.",img:"https://upload.wikimedia.org/wikipedia/commons/7/7c/Jorasanko_Thakur_Bari.jpg",district:"Kolkata"},
+    {id:29,name:"Gour",lat:24.875648,lng:88.130521,cat:"heritage",desc:"Ancient capital of Bengal with ruins of medieval monuments, gates, and mosques.",img:"https://upload.wikimedia.org/wikipedia/commons/9/9c/Gaur%2C_West_Bengal_04.jpg",district:"Malda"},
+    {id:30,name:"Sovabazar Rajbari",lat:22.596313,lng:88.367380,cat:"heritage",desc:"18th-century palace built by Raja Nabakrishna Deb, known for Durga Puja celebrations.",img:"https://upload.wikimedia.org/wikipedia/commons/f/f3/Sovabazar_Rajbari.jpg",district:"Kolkata"},
+    {id:31,name:"Rabindra Setu",lat:22.585336,lng:88.346772,cat:"heritage",desc:"Iconic cantilever bridge over Hooghly River, popularly known as Howrah Bridge.",img:"https://upload.wikimedia.org/wikipedia/commons/6/6c/Howrah_Bridge_2017.jpg",district:"Howrah"},
+    {id:32,name:"Curzon Gate",lat:23.240444,lng:87.867523,cat:"heritage",desc:"Victorian-era archway built to commemorate Lord Curzon's visit to Bardhaman.",img:"https://upload.wikimedia.org/wikipedia/commons/5/5a/Curzon_Gate_Burdwan.jpg",district:"Purba Bardhaman"},
+    {id:33,name:"Bolla Kali Temple",lat:25.329648,lng:88.710580,cat:"heritage",desc:"Ancient temple dedicated to Goddess Kali, known for its unique rituals and architecture.",img:"https://upload.wikimedia.org/wikipedia/commons/4/4a/Kali_Temple_West_Bengal.jpg",district:"Malda"},
+    {id:34,name:"Cooch Behar Palace",lat:26.327223,lng:89.438685,cat:"heritage",desc:"Victorian-style palace inspired by Buckingham Palace, built by Maharaja Nripendra Narayan.",img:"https://upload.wikimedia.org/wikipedia/commons/4/4f/Cooch_Behar_Palace_2012.jpg",district:"Cooch Behar"},
+    {id:35,name:"House of Gokul Mitra",lat:22.600627,lng:88.364027,cat:"heritage",desc:"Historic 19th-century mansion showcasing traditional Bengali architecture with European influences.",img:"https://upload.wikimedia.org/wikipedia/commons/8/8c/Colonial_mansion_Kolkata.jpg",district:"Kolkata"},
+    {id:36,name:"Vidyasagar Bridge",lat:22.557498,lng:88.327777,cat:"heritage",desc:"Cable-stayed bridge over Hooghly River named after educationist Ishwar Chandra Vidyasagar.",img:"https://upload.wikimedia.org/wikipedia/commons/8/8a/Vidyasagar_Setu.jpg",district:"Kolkata"},
+    {id:37,name:"Jor Bangla Temple",lat:23.071890,lng:87.326775,cat:"heritage",desc:"17th-century terracotta temple in Bishnupur known for intricate clay artwork.",img:"https://upload.wikimedia.org/wikipedia/commons/5/5f/Jor_Bangla_Temple%2C_Bishnupur.jpg",district:"Bankura"},
+    {id:38,name:"Kath Golap Bagan Bari",lat:24.207342,lng:88.266999,cat:"heritage",desc:"Historic garden house with wooden architecture in Murshidabad region.",img:"https://upload.wikimedia.org/wikipedia/commons/6/6a/Heritage_House_West_Bengal.jpg",district:"Murshidabad"},
+    {id:39,name:"Churulia",lat:23.780887,lng:87.068887,cat:"heritage",desc:"Birthplace of revolutionary poet Kazi Nazrul Islam, with museum dedicated to his life.",img:"https://upload.wikimedia.org/wikipedia/commons/8/8a/Kazi_Nazrul_Islam_Birthplace.jpg",district:"Paschim Bardhaman"},
+    {id:40,name:"Marble Palace",lat:22.582245,lng:88.360176,cat:"heritage",desc:"19th-century mansion with neoclassical architecture, art collection, and marble sculptures.",img:"https://upload.wikimedia.org/wikipedia/commons/9/9f/Marble_Palace_Kolkata.jpg",district:"Kolkata"}
+];
+0
+    // Initialize map
+    const map = L.map('map', {zoomControl:false}).setView([23.6,87.4],7);
+    L.control.zoom({position:'bottomright'}).addTo(map);
+
+    // Dark basemap
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+      maxZoom:19,
+      attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
+    }).addTo(map);
+
+    // Global variables
+    let districtLayer = null;
+    let currentDistrictFilter = null;
+    let clickTimeout = null;
+    let isDistrictLoading = false;
+    let userLocationMarker = null;
+    let userLocationCircle = null;
+    let currentRoute = null;
+
+    // Improved helper function to normalize district names for comparison
+    function normalizeDistrictName(name) {
+      return name.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[^a-z0-9\s]/g, '');
+    }
+
+    // Function to show loading state
+    function showLoading(message = 'Loading...') {
+      const loadingEl = document.createElement('div');
+      loadingEl.id = 'loading-notification';
+      loadingEl.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--dark-light);border-radius:8px;border:1px solid var(--border)">
+          <div class="loading-spinner"></div>
+          <span>${message}</span>
+        </div>
+      `;
+      loadingEl.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        animation: slideInDown 0.3s ease;
+      `;
+      document.body.appendChild(loadingEl);
+      return loadingEl;
+    }
+
+    // Function to hide loading
+    function hideLoading() {
+      const loadingEl = document.getElementById('loading-notification');
+      if (loadingEl) {
+        loadingEl.style.animation = 'slideOutUp 0.3s ease';
+        setTimeout(() => loadingEl.remove(), 300);
+      }
+    }
+
+    // Function to show notification
+    function showNotification(message, type = 'info') {
+      // Remove existing notification
+      const existingNotification = document.querySelector('.district-notification');
+      if (existingNotification) {
+        existingNotification.remove();
+      }
+      
+      // Create new notification
+      const notification = document.createElement('div');
+      notification.className = 'district-notification';
+      notification.innerHTML = message;
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'error' ? '#ef4444' : 'var(--primary)'};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        z-index: 1000;
+        font-size: 14px;
+        font-weight: 500;
+        animation: slideIn 0.3s ease;
+        max-width: 300px;
+      `;
+      
+      document.body.appendChild(notification);
+      
+      // Remove after 3 seconds
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+
+    // Enhanced image error handler with better fallback
+    function handleImageError(img) {
+    console.log('Image failed to load:', img.src);
+    img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA4MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMzM0MTU1Ii8+Cjx0ZXh0IHg9IjQwIiB5PSIzMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjN0Y4Q0FBIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+Cjwvc3ZnPgo=';
+    img.onerror = null; // Prevent infinite loop
+   }
+
+    // Throttled click handler for performance
+    function throttleClick(callback, delay = 300) {
+      return function(...args) {
+        if (clickTimeout) clearTimeout(clickTimeout);
+        clickTimeout = setTimeout(() => callback.apply(this, args), delay);
+      };
+    }
+
+    // Load district boundaries from GeoJSON with fallback
+    function loadDistrictBoundaries() {
+      if (isDistrictLoading) return;
+      
+      isDistrictLoading = true;
+      const loadingEl = showLoading('Loading district boundaries...');
+
+      // Try multiple GeoJSON sources with fallback
+      const geoJsonUrls = [
+        'https://raw.githubusercontent.com/bd805672-eng/API751629/main/WEST%20BENGAL_DISTRICTS.geojson',
+        'https://raw.githubusercontent.com/Subhrajit97/GeoJSON-Data-of-Indian-States/master/West_Bengal/West_Bengal.json'
+      ];
+
+      let currentUrlIndex = 0;
+
+      function tryNextUrl() {
+        if (currentUrlIndex >= geoJsonUrls.length) {
+          // All URLs failed
+          hideLoading();
+          isDistrictLoading = false;
+          showNotification('District boundaries unavailable. Using POI markers only.', 'error');
+          return;
+        }
+
+        fetch(geoJsonUrls[currentUrlIndex])
+          .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+          })
+          .then(data => {
+            hideLoading();
+            isDistrictLoading = false;
+            addDistrictLayer(data);
+            showNotification('District boundaries loaded successfully');
+          })
+          .catch(error => {
+            console.warn(`Failed to load from ${geoJsonUrls[currentUrlIndex]}:`, error);
+            currentUrlIndex++;
+            tryNextUrl();
+          });
+      }
+
+      tryNextUrl();
+    }
+
+    // Add district layer to map
+    function addDistrictLayer(data) {
+      districtLayer = L.geoJSON(data, {
+        style: {
+          fillColor: 'rgba(37, 99, 235, 0.1)',
+          weight: 2,
+          opacity: 0.7,
+          color: '#2563eb',
+          fillOpacity: 0.1
+        },
+        onEachFeature: function(feature, layer) {
+          // Add popup with district name
+          if (feature.properties && feature.properties.DISTRICT) {
+            layer.bindPopup(`
+              <div style="min-width: 200px">
+                <h3 style="margin: 0 0 8px; color: var(--text)">${feature.properties.DISTRICT} District</h3>
+                <p style="margin: 0; color: var(--text-light); font-size: 14px">
+                  Click to view tourism places in ${feature.properties.DISTRICT} district
+                </p>
+                <button onclick="filterByDistrict('${feature.properties.DISTRICT}')" 
+                  style="margin-top: 10px; padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%">
+                  Show Tourism Places
+                </button>
+              </div>
+            `);
+            
+            // Add throttled click event
+            layer.on('click', throttleClick(function(e) {
+              const districtName = feature.properties.DISTRICT;
+              filterByDistrict(districtName);
+              document.getElementById('searchBox').value = districtName;
+            }));
+          }
+          
+          // Add hover effects
+          layer.on('mouseover', function() {
+            this.setStyle({
+              weight: 3,
+              opacity: 1,
+              color: '#3b82f6',
+              fillOpacity: 0.2
+            });
+          });
+          layer.on('mouseout', function() {
+            if (currentDistrictFilter !== feature.properties.DISTRICT) {
+              this.setStyle({
+                weight: 2,
+                opacity: 0.7,
+                color: '#2563eb',
+                fillOpacity: 0.1
+              });
+            }
+          });
+        }
+      }).addTo(map);
+    }
+
+    // Function to filter POIs by district
+    function filterByDistrict(districtName) {
+      currentDistrictFilter = districtName;
+      
+      // Filter POIs by district using normalized names for comparison
+      const districtPOIs = POIS.filter(poi => 
+        normalizeDistrictName(poi.district) === normalizeDistrictName(districtName)
+      );
+      
+      // Clear all markers
+      markers.clearLayers();
+      
+      // Add only POIs from this district
+      districtPOIs.forEach(p => markers.addLayer(markerMap[p.id]));
+      
+      // Update the POI list
+      renderFilteredList(districtPOIs);
+      
+      // Highlight the district
+      if (districtLayer) {
+        let foundDistrict = false;
+        districtLayer.eachLayer(function(layer) {
+          if (layer.feature && layer.feature.properties && layer.feature.properties.DISTRICT) {
+            const layerDistrictName = layer.feature.properties.DISTRICT;
+            if (normalizeDistrictName(layerDistrictName) === normalizeDistrictName(districtName)) {
+              // Zoom to the bounds of this district
+              map.fitBounds(layer.getBounds().pad(0.1));
+              layer.setStyle({
+                weight: 4,
+                opacity: 1,
+                color: '#60a5fa',
+                fillColor: 'rgba(37, 99, 235, 0.3)',
+                fillOpacity: 0.3
+              });
+              layer.openPopup();
+              foundDistrict = true;
+            } else {
+              layer.setStyle({
+                weight: 1,
+                opacity: 0.3,
+                color: '#2563eb',
+                fillColor: 'rgba(37, 99, 235, 0.05)',
+                fillOpacity: 0.05
+              });
+            }
+          }
+        });
+        
+        if (!foundDistrict) {
+          console.warn(`District "${districtName}" not found in boundaries`);
+        }
+      }
+      
+      // Update filter chips to show "All" as active
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      document.querySelector('.filter-chip[data-filter="all"]').classList.add('active');
+      
+      // Show notification
+      showNotification(`Showing ${districtPOIs.length} tourism places in ${districtName}`);
+    }
+
+    // Function to reset district styles
+    function resetDistrictStyles() {
+      if (districtLayer) {
+        districtLayer.eachLayer(function(layer) {
+          layer.setStyle({
+            weight: 2,
+            opacity: 0.7,
+            color: '#2563eb',
+            fillColor: 'rgba(37, 99, 235, 0.1)',
+            fillOpacity: 0.1
+          });
+        });
+      }
+    }
+
+    // Function to reset to default view
+    function resetToDefaultView() {
+      markers.clearLayers();
+      POIS.forEach(p => markers.addLayer(markerMap[p.id]));
+      renderList('all');
+      map.setView([23.6,87.4],7);
+      currentDistrictFilter = null;
+      resetDistrictStyles();
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      document.querySelector('.filter-chip[data-filter="all"]').classList.add('active');
+    }
+
+    // Function to render filtered list
+    function renderFilteredList(poiArray) {
+      const poiList = document.getElementById('poiList');
+      poiList.innerHTML = '';
+      
+      if (poiArray.length === 0) {
+        poiList.innerHTML = `
+          <div style="text-align:center;padding:30px;color:var(--text-light)">
+            <div style="font-size:48px;margin-bottom:10px">🏞️</div>
+            <p>No tourism places found.</p>
+            <p style="font-size:12px;margin-top:8px">Try a different search or filter</p>
+          </div>`;
+        return;
+      }
+      
+      poiArray.forEach(p => {
+        const el = document.createElement('div'); 
+        el.className = 'poi-card';
+        el.innerHTML = `
+          <img src='${p.img}' alt='${p.name}' class='poi-image' onerror="handleImageError(this)">
+          <div class='poi-content'>
+            <h3 class='poi-title'>${p.name}</h3>
+            <p class='poi-desc'>${p.desc}</p>
+            <div class='poi-district'>${p.district} District • ${p.cat.charAt(0).toUpperCase() + p.cat.slice(1)}</div>
+          </div>
+        `;
+        el.addEventListener('click', throttleClick(() => {
+          map.setView([p.lat, p.lng], 13); 
+          markerMap[p.id].openPopup();
+          setAsDestination(p.id);
+        }));
+        poiList.appendChild(el);
+      });
+    }
+
+    // Marker cluster group
+    const markers = L.markerClusterGroup({
+      chunkedLoading: true,
+      maxClusterRadius: 50
+    });
+
+    // Custom div icon
+    function createIcon(){
+      return L.divIcon({className:'custom-marker',html:'<div class="pulse-marker"></div>',iconSize:[20,20]});
+    }
+
+    const poiById = {};
+    POIS.forEach(p=>{poiById[p.id]=p});
+
+    // Create enhanced popup with routing option
+    function createEnhancedPopup(p) {
+      return `
+        <div class="enhanced-popup">
+          <h3 style='margin:0 0 6px;color:var(--text)'>${p.name}</h3>
+          <img src='${p.img}' style='width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px' onerror="handleImageError(this)"/>
+          <p style='margin:0;font-size:13px;color:var(--text-light)'>${p.desc}</p>
+          <p style='margin:4px 0;font-size:12px;color:var(--secondary)'><strong>District:</strong> ${p.district}</p>
+          <p style='margin:4px 0;font-size:12px;color:var(--text-light)'><strong>Category:</strong> ${p.cat.charAt(0).toUpperCase() + p.cat.slice(1)}</p>
+          <div class="popup-routing">
+            <button class="popup-routing-btn" onclick="setAsDestination(${p.id})">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L12 22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M17 7L12 2L7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M7 17L12 22L17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Set as Destination
+            </button>
+          </div>
+          <p style='margin:8px 0 0'>
+            <a target='_blank' href='https://www.google.com/search?q=${encodeURIComponent(p.name+" west bengal")}' style='color:var(--primary);text-decoration:none;font-weight:500'>More info ↗</a>
+          </p>
+        </div>
+      `;
+    }
+
+    // Add markers
+    const markerMap = {};
+    POIS.forEach(p=>{
+      const m = L.marker([p.lat,p.lng],{icon:createIcon()});
+      m.bindPopup(createEnhancedPopup(p),{maxWidth:300});
+      m.options.category = p.cat;
+      markers.addLayer(m);
+      markerMap[p.id] = m;
+    });
+    map.addLayer(markers);
+
+    // Build POI list in side panel
+    const poiList = document.getElementById('poiList');
+    function renderList(filter){
+      poiList.innerHTML = '';
+      const list = POIS.filter(p => filter==='all' ? true : p.cat===filter);
+      list.forEach(p=>{
+        const el = document.createElement('div'); 
+        el.className='poi-card';
+        el.innerHTML = `
+          <img src='${p.img}' alt='${p.name}' class='poi-image' onerror="handleImageError(this)">
+          <div class='poi-content'>
+            <h3 class='poi-title'>${p.name}</h3>
+            <p class='poi-desc'>${p.desc}</p>
+            <div class='poi-district'>${p.district} District • ${p.cat.charAt(0).toUpperCase() + p.cat.slice(1)}</div>
+          </div>
+        `;
+        el.addEventListener('click', throttleClick(()=>{
+          map.setView([p.lat,p.lng],13); 
+          markerMap[p.id].openPopup();
+          setAsDestination(p.id);
+        }));
+        poiList.appendChild(el);
+      });
+      if(list.length===0) poiList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light)">No results found.</div>';
+    }
+    renderList('all');
+
+    // Filter buttons
+    document.querySelectorAll('.filter-chip').forEach(chip=>{
+      chip.addEventListener('click', throttleClick(()=>{
+        document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+        chip.classList.add('active');
+        const f = chip.dataset.filter;
+        
+        // Reset district filter when category filter is used
+        currentDistrictFilter = null;
+        resetDistrictStyles();
+        
+        // show/hide markers based on category
+        markers.clearLayers();
+        POIS.filter(p=> f==='all' ? true : p.cat===f).forEach(p=>markers.addLayer(markerMap[p.id]));
+        renderList(f);
+      }));
+    });
+
+    // Enhanced search function for both POIs and Districts
+    const searchBox = document.getElementById('searchBox');
+    const searchBtn = document.getElementById('searchBtn');
+    
+    searchBox.addEventListener('keydown', (e)=>{if(e.key==='Enter'){doSearch();}});
+    searchBtn.addEventListener('click', doSearch);
+    
+    function doSearch(){
+      const q = searchBox.value.trim().toLowerCase();
+      
+      // Clear previous search results
+      markers.clearLayers();
+      
+      if(!q){
+        resetToDefaultView();
+        return;
+      }
+      
+      // Search for exact district match first
+      const exactDistrictMatch = POIS.find(p => 
+        normalizeDistrictName(p.district) === normalizeDistrictName(q)
+      );
+      
+      if (exactDistrictMatch) {
+        filterByDistrict(exactDistrictMatch.district);
+        return;
+      }
+      
+      // Search in POIs
+      const poiResults = POIS.filter(p => 
+        p.name.toLowerCase().includes(q) || 
+        p.desc.toLowerCase().includes(q) ||
+        normalizeDistrictName(p.district).includes(normalizeDistrictName(q)) ||
+        p.cat.toLowerCase().includes(q)
+      );
+      
+      if (poiResults.length > 0) {
+        // If POI is found, show only those POIs
+        poiResults.forEach(p=>markers.addLayer(markerMap[p.id]));
+        renderFilteredList(poiResults);
+        if(poiResults[0]) {
+          map.setView([poiResults[0].lat,poiResults[0].lng],12);
+          markerMap[poiResults[0].id].openPopup();
+        }
+        
+        // Reset district styles
+        resetDistrictStyles();
+        currentDistrictFilter = null;
+      } else {
+        // No results
+        renderFilteredList([]);
+        
+        // Reset district styles
+        resetDistrictStyles();
+        currentDistrictFilter = null;
+        
+        // Show a message
+        showNotification('No places or districts found matching your search.', 'error');
+      }
+    }
+
+    // Locate button - FIXED VERSION
+    document.getElementById('locateBtn').addEventListener('click', throttleClick(()=>{
+      if(!navigator.geolocation){
+        showNotification('Geolocation not supported by your browser', 'error');
+        return;
+      }
+      
+      const loading = showLoading('Finding your location...');
+      
+      // Clear previous location markers
+      if (userLocationMarker) {
+        map.removeLayer(userLocationMarker);
+      }
+      if (userLocationCircle) {
+        map.removeLayer(userLocationCircle);
+      }
+      
+      navigator.geolocation.getCurrentPosition(
+        pos=>{
+          hideLoading();
+          const c=pos.coords;
+          
+          // Zoom to user location with higher precision
+          map.setView([c.latitude,c.longitude], 15);
+          
+          // Add a more visible marker for user location
+          userLocationMarker = L.marker([c.latitude, c.longitude], {
+            icon: L.divIcon({
+              className: 'user-location-marker',
+              html: '<div style="background:#10b981;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px rgba(16,185,129,0.8)"></div>',
+              iconSize: [22, 22],
+              iconAnchor: [11, 11]
+            })
+          }).addTo(map);
+          
+          // Add accuracy circle with better visibility
+          userLocationCircle = L.circle([c.latitude, c.longitude], {
+            radius: c.accuracy || 50,
+            fillColor: '#10b981',
+            color: '#10b981',
+            weight: 2,
+            opacity: 0.3,
+            fillOpacity: 0.1
+          }).addTo(map);
+          
+          // Add popup with coordinates
+          userLocationMarker.bindPopup(`
+            <div style="min-width: 200px">
+              <h3 style="margin: 0 0 8px; color: var(--text)">Your Location</h3>
+              <p style="margin: 0; color: var(--text-light); font-size: 14px">
+                Latitude: ${c.latitude.toFixed(6)}<br>
+                Longitude: ${c.longitude.toFixed(6)}<br>
+                Accuracy: ${(c.accuracy || 0).toFixed(1)} meters
+              </p>
+            </div>
+          `).openPopup();
+          
+          showNotification(`Location found! Accuracy: ${(c.accuracy || 0).toFixed(0)} meters`);
+        },
+        err=>{
+          hideLoading();
+          let errorMessage = 'Unable to fetch your location. ';
+          switch(err.code) {
+            case err.PERMISSION_DENIED:
+              errorMessage += 'Please allow location access in your browser settings.';
+              break;
+            case err.POSITION_UNAVAILABLE:
+              errorMessage += 'Location information is unavailable.';
+              break;
+            case err.TIMEOUT:
+              errorMessage += 'Location request timed out.';
+              break;
+            default:
+              errorMessage += 'Please check permissions.';
+          }
+          showNotification(errorMessage, 'error');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 60000
+        }
+      );
+    }));
+
+    // Address geocoding and routing functionality
+    function initRouting() {
+      // Set up locate button for "From" field
+      document.getElementById('locateFromBtn').addEventListener('click', function() {
+        if (!navigator.geolocation) {
+          showNotification('Geolocation not supported by your browser', 'error');
+          return;
+        }
+
+        const loading = showLoading('Getting your location...');
+        
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            hideLoading();
+            const coords = pos.coords;
+            
+            // Try to get address from coordinates (reverse geocoding)
+            getAddressFromCoords(coords.latitude, coords.longitude)
+              .then(address => {
+                document.getElementById('routeFrom').value = address;
+                updateClearButtonVisibility('routeFrom', 'clearFromBtn');
+              })
+              .catch(() => {
+                document.getElementById('routeFrom').value = `Current Location (${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)})`;
+                updateClearButtonVisibility('routeFrom', 'clearFromBtn');
+              });
+            
+            // Store coordinates for routing
+            window.currentLocation = {
+              lat: coords.latitude,
+              lng: coords.longitude,
+              name: 'Current Location'
+            };
+            
+            showNotification('Location set as starting point');
+          },
+          err => {
+            hideLoading();
+            showNotification('Unable to fetch your location. Please check permissions.', 'error');
+          }
+        );
+      });
+
+      // Set up clear buttons for "From" and "To" fields
+      document.getElementById('clearFromBtn').addEventListener('click', function() {
+        document.getElementById('routeFrom').value = '';
+        window.currentLocation = null;
+        updateClearButtonVisibility('routeFrom', 'clearFromBtn');
+      });
+      
+      document.getElementById('clearToBtn').addEventListener('click', function() {
+        document.getElementById('routeTo').value = '';
+        window.currentDestination = null;
+        updateClearButtonVisibility('routeTo', 'clearToBtn');
+      });
+
+      // Set up address suggestions for "From" field
+      const routeFromInput = document.getElementById('routeFrom');
+      let suggestionTimeout;
+      
+      routeFromInput.addEventListener('input', function() {
+        clearTimeout(suggestionTimeout);
+        const query = this.value.trim();
+        updateClearButtonVisibility('routeFrom', 'clearFromBtn');
+        
+        if (query.length < 3) {
+          hideAddressSuggestions();
+          return;
+        }
+        
+        suggestionTimeout = setTimeout(() => {
+          getAddressSuggestions(query);
+        }, 300);
+      });
+      
+      routeFromInput.addEventListener('focus', function() {
+        const query = this.value.trim();
+        if (query.length >= 3) {
+          getAddressSuggestions(query);
+        }
+      });
+      
+      // Set up destination field
+      const routeToInput = document.getElementById('routeTo');
+      routeToInput.addEventListener('input', function() {
+        updateClearButtonVisibility('routeTo', 'clearToBtn');
+      });
+      
+      // Hide suggestions when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('.route-input') && !e.target.closest('.address-suggestions')) {
+          hideAddressSuggestions();
+        }
+      });
+
+      // Set up route calculation
+      document.getElementById('findRouteBtn').addEventListener('click', findRoute);
+      document.getElementById('clearRoute').addEventListener('click', clearRoute);
+
+      // Set up route preview actions
+      document.getElementById('openInMapsBtn').addEventListener('click', openInGoogleMaps);
+      
+      // Set up share route button
+      document.getElementById('shareRouteBtn').addEventListener('click', showShareModal);
+      
+      // Set up close route preview button
+      document.getElementById('closeRoutePreview').addEventListener('click', closeRoutePreview);
+      
+      // Set up share modal
+      document.getElementById('closeShareModal').addEventListener('click', closeShareModal);
+      document.getElementById('copyShareUrl').addEventListener('click', copyShareUrl);
+      document.getElementById('shareWhatsApp').addEventListener('click', shareViaWhatsApp);
+      document.getElementById('shareFacebook').addEventListener('click', shareViaFacebook);
+      document.getElementById('shareTwitter').addEventListener('click', shareViaTwitter);
+    }
+
+    // Function to update clear button visibility
+    function updateClearButtonVisibility(inputId, buttonId) {
+      const inputValue = document.getElementById(inputId).value.trim();
+      const button = document.getElementById(buttonId);
+      
+      if (inputValue.length > 0) {
+        button.style.display = 'flex';
+      } else {
+        button.style.display = 'none';
+      }
+    }
+
+    // Get address suggestions using Nominatim API (all over India)
+    function getAddressSuggestions(query) {
+      const loading = showLoading('Searching addresses...');
+      
+      // Search all over India, not just West Bengal
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', India')}&limit=5`)
+        .then(response => response.json())
+        .then(data => {
+          hideLoading();
+          showAddressSuggestions(data);
+        })
+        .catch(error => {
+          hideLoading();
+          console.error('Error fetching address suggestions:', error);
+        });
+    }
+
+    // Show address suggestions dropdown
+    function showAddressSuggestions(suggestions) {
+      hideAddressSuggestions();
+      
+      if (suggestions.length === 0) return;
+      
+      const container = document.querySelector('.input-with-button');
+      const suggestionsEl = document.createElement('div');
+      suggestionsEl.className = 'address-suggestions';
+      
+      suggestions.forEach((suggestion) => {
+        const suggestionEl = document.createElement('div');
+        suggestionEl.className = 'address-suggestion';
+        suggestionEl.textContent = suggestion.display_name;
+        suggestionEl.addEventListener('click', () => {
+          document.getElementById('routeFrom').value = suggestion.display_name;
+          window.currentLocation = {
+            lat: parseFloat(suggestion.lat),
+            lng: parseFloat(suggestion.lon),
+            name: suggestion.display_name
+          };
+          updateClearButtonVisibility('routeFrom', 'clearFromBtn');
+          hideAddressSuggestions();
+          showNotification('Address selected');
+        });
+        suggestionsEl.appendChild(suggestionEl);
+      });
+      
+      container.appendChild(suggestionsEl);
+    }
+
+    // Hide address suggestions
+    function hideAddressSuggestions() {
+      const existingSuggestions = document.querySelector('.address-suggestions');
+      if (existingSuggestions) {
+        existingSuggestions.remove();
+      }
+    }
+
+    // Get address from coordinates (reverse geocoding)
+    function getAddressFromCoords(lat, lng) {
+      return fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
+        .then(response => response.json())
+        .then(data => {
+          if (data && data.display_name) {
+            return data.display_name;
+          }
+          throw new Error('No address found');
+        });
+    }
+
+    // Set POI as destination
+    function setAsDestination(poiId) {
+      const poi = POIS.find(p => p.id === poiId);
+      if (poi) {
+        document.getElementById('routeTo').value = poi.name;
+        updateClearButtonVisibility('routeTo', 'clearToBtn');
+        window.currentDestination = { 
+          lat: poi.lat, 
+          lng: poi.lng,
+          name: poi.name
+        };
+        showNotification(`"${poi.name}" set as destination`);
+        
+        // Scroll to routing section
+        document.querySelector('.routing-section').scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'nearest'
+        });
+      }
+    }
+
+    // Calculate distance between two points using Haversine formula
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Earth's radius in kilometers
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const distance = R * c;
+      return distance;
+    }
+
+    // Calculate travel times for different modes
+    function calculateTravelTimes(distance) {
+      // Average speeds in km/h
+      const speeds = {
+        car: 60,
+        bike: 40,
+        bus: 45,
+        train: 50
+      };
+      
+      // Calculate time in hours
+      const times = {};
+      for (const mode in speeds) {
+        times[mode] = distance / speeds[mode];
+      }
+      
+      return times;
+    }
+
+    // Format time for display
+    function formatTime(hours) {
+      const totalMinutes = Math.round(hours * 60);
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
+      
+      if (h > 0) {
+        return `${h}h ${m}m`;
+      } else {
+        return `${m}m`;
+      }
+    }
+
+    // Find route function
+    function findRoute() {
+      const fromInput = document.getElementById('routeFrom').value.trim();
+      const toInput = document.getElementById('routeTo').value.trim();
+
+      if (!fromInput) {
+        showNotification('Please set your starting location', 'error');
+        return;
+      }
+
+      if (!toInput) {
+        showNotification('Please select a destination', 'error');
+        return;
+      }
+
+      // If we don't have coordinates for the starting point, geocode the address
+      if (!window.currentLocation && fromInput) {
+        const loading = showLoading('Finding your starting location...');
+        
+        // Search all over India, not just West Bengal
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fromInput + ', India')}&limit=1`)
+          .then(response => response.json())
+          .then(data => {
+            hideLoading();
+            if (data && data.length > 0) {
+              window.currentLocation = {
+                lat: parseFloat(data[0].lat),
+                lng: parseFloat(data[0].lon),
+                name: fromInput
+              };
+              showRoutePreview();
+            } else {
+              showNotification('Could not find the starting address. Please try again.', 'error');
+            }
+          })
+          .catch(error => {
+            hideLoading();
+            showNotification('Error finding your starting location', 'error');
+          });
+      } else {
+        showRoutePreview();
+      }
+    }
+
+    // Show route preview in the upper right corner
+    function showRoutePreview() {
+      // Show the route preview container
+      document.getElementById('routePreviewContainer').classList.add('active');
+      document.getElementById('clearRoute').style.display = 'block';
+      
+      // Calculate distance
+      const distance = calculateDistance(
+        window.currentLocation.lat, window.currentLocation.lng,
+        window.currentDestination.lat, window.currentDestination.lng
+      );
+      
+      // Store current route data
+      currentRoute = {
+        from: window.currentLocation,
+        to: window.currentDestination,
+        distance: distance
+      };
+      
+      // Update travel modes
+      updateTravelModes(distance);
+      
+      // Clear any existing preview map
+      const previewContainer = document.getElementById('routePreview');
+      previewContainer.innerHTML = '';
+      
+      // Create a new map container
+      const mapDiv = document.createElement('div');
+      mapDiv.className = 'route-preview-map';
+      mapDiv.id = 'routePreviewMap';
+      previewContainer.appendChild(mapDiv);
+      
+      // Initialize the preview map
+      const routePreviewMap = L.map('routePreviewMap', {
+        zoomControl: false,
+        attributionControl: false
+      });
+      
+      // Add a tile layer to the preview map
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18
+      }).addTo(routePreviewMap);
+      
+      // Add markers for start and destination
+      const startIcon = L.divIcon({
+        className: 'preview-start-marker',
+        html: '<div style="background:#10b981;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 5px rgba(0,0,0,0.5)"></div>',
+        iconSize: [12, 12]
+      });
+      
+      const endIcon = L.divIcon({
+        className: 'preview-end-marker',
+        html: '<div style="background:#ef4444;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 5px rgba(0,0,0,0.5)"></div>',
+        iconSize: [12, 12]
+      });
+      
+      L.marker([window.currentLocation.lat, window.currentLocation.lng], {icon: startIcon})
+        .bindPopup('Start')
+        .addTo(routePreviewMap);
+      
+      L.marker([window.currentDestination.lat, window.currentDestination.lng], {icon: endIcon})
+        .bindPopup('Destination')
+        .addTo(routePreviewMap);
+      
+      // Fit the map to show all points
+      const bounds = L.latLngBounds([
+        [window.currentLocation.lat, window.currentLocation.lng],
+        [window.currentDestination.lat, window.currentDestination.lng]
+      ]);
+      
+      routePreviewMap.fitBounds(bounds, { padding: [10, 10] });
+      
+      showNotification('Route preview created');
+    }
+
+    // Update travel modes
+    function updateTravelModes(distance) {
+      const travelModes = document.getElementById('travelModes');
+      const times = calculateTravelTimes(distance);
+      
+      travelModes.innerHTML = `
+        <div class="travel-mode">
+          <div class="travel-mode-info">
+            <div class="travel-mode-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 3H1V16H16V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16 8H20L23 11V16H16V8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5.5 21C6.88071 21 8 19.8807 8 18.5C8 17.1193 6.88071 16 5.5 16C4.11929 16 3 17.1193 3 18.5C3 19.8807 4.11929 21 5.5 21Z" stroke="currentColor" stroke-width="2"/>
+                <path d="M18.5 21C19.8807 21 21 19.8807 21 18.5C21 17.1193 19.8807 16 18.5 16C17.1193 16 16 17.1193 16 18.5C16 19.8807 17.1193 21 18.5 21Z" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </div>
+            <span class="travel-mode-name">Car</span>
+          </div>
+          <div class="travel-mode-details">
+            <span class="travel-mode-time">${formatTime(times.car)}</span>
+            <span class="travel-mode-distance">${distance.toFixed(1)} km</span>
+          </div>
+        </div>
+        
+        <div class="travel-mode">
+          <div class="travel-mode-info">
+            <div class="travel-mode-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 20H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5 20C3.89543 20 3 19.1046 3 18V6C3 4.89543 3.89543 4 5 4H19C20.1046 4 21 4.89543 21 6V18C21 19.1046 20.1046 20 19 20" stroke="currentColor" stroke-width="2"/>
+                <path d="M5 20V14H21V20" stroke="currentColor" stroke-width="2"/>
+                <path d="M9 7H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 11H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span class="travel-mode-name">Bus</span>
+          </div>
+          <div class="travel-mode-details">
+            <span class="travel-mode-time">${formatTime(times.bus)}</span>
+            <span class="travel-mode-distance">${distance.toFixed(1)} km</span>
+          </div>
+        </div>
+        
+        <div class="travel-mode">
+          <div class="travel-mode-info">
+            <div class="travel-mode-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17.8 19.2L16 22H8L6.2 19.2C5.6 18.2 5.3 17.1 5.3 16V7C5.3 4.2 7.5 2 10.3 2H13.7C16.5 2 18.7 4.2 18.7 7V16C18.7 17.1 18.4 18.2 17.8 19.2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 6H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 15H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span class="travel-mode-name">Train</span>
+          </div>
+          <div class="travel-mode-details">
+            <span class="travel-mode-time">${formatTime(times.train)}</span>
+            <span class="travel-mode-distance">${distance.toFixed(1)} km</span>
+          </div>
+        </div>
+        
+        <div class="travel-mode">
+          <div class="travel-mode-info">
+            <div class="travel-mode-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 18H3C2.44772 18 2 17.5523 2 17V7C2 6.44772 2.44772 6 3 6H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M19 18H21C21.5523 18 22 17.5523 22 17V7C22 6.44772 21.5523 6 21 6H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 18V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5 12H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M19 12H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span class="travel-mode-name">Bike</span>
+          </div>
+          <div class="travel-mode-details">
+            <span class="travel-mode-time">${formatTime(times.bike)}</span>
+            <span class="travel-mode-distance">${distance.toFixed(1)} km</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Close route preview
+    function closeRoutePreview() {
+      document.getElementById('routePreviewContainer').classList.remove('active');
+    }
+
+    // Clear route function
+    function clearRoute() {
+      // Hide route preview
+      document.getElementById('routePreviewContainer').classList.remove('active');
+      document.getElementById('clearRoute').style.display = 'none';
+      document.getElementById('routeTo').value = '';
+      updateClearButtonVisibility('routeTo', 'clearToBtn');
+      window.currentDestination = null;
+      currentRoute = null;
+      
+      showNotification('Route cleared');
+    }
+
+    // Open route in Google Maps
+    function openInGoogleMaps() {
+      if (!window.currentLocation || !window.currentDestination) {
+        showNotification('No route calculated to open in maps', 'error');
+        return;
+      }
+      
+      const fromLat = window.currentLocation.lat;
+      const fromLng = window.currentLocation.lng;
+      const toLat = window.currentDestination.lat;
+      const toLng = window.currentDestination.lng;
+      
+      // Create Google Maps URL
+      const googleMapsUrl = `https://www.google.com/maps/dir/${fromLat},${fromLng}/${toLat},${toLng}`;
+      
+      // Open in new tab
+      window.open(googleMapsUrl, '_blank');
+    }
+
+    // Share route functionality
+    function showShareModal() {
+      if (!currentRoute) {
+        showNotification('No route to share', 'error');
+        return;
+      }
+      
+      // Generate shareable URL
+      const shareUrl = generateShareUrl();
+      document.getElementById('shareUrlInput').value = shareUrl;
+      
+      // Show modal
+      document.getElementById('shareModal').classList.add('active');
+    }
+
+    function closeShareModal() {
+      document.getElementById('shareModal').classList.remove('active');
+    }
+
+    function generateShareUrl() {
+      if (!currentRoute) return '';
+      
+      const baseUrl = window.location.href.split('?')[0];
+      const params = new URLSearchParams({
+        from: `${currentRoute.from.lat},${currentRoute.from.lng}`,
+        to: `${currentRoute.to.lat},${currentRoute.to.lng}`,
+        fromName: currentRoute.from.name,
+        toName: currentRoute.to.name
+      });
+      
+      return `${baseUrl}?${params.toString()}`;
+    }
+
+    function copyShareUrl() {
+      const shareUrlInput = document.getElementById('shareUrlInput');
+      shareUrlInput.select();
+      shareUrlInput.setSelectionRange(0, 99999); // For mobile devices
+      
+      navigator.clipboard.writeText(shareUrlInput.value)
+        .then(() => {
+          const copyBtn = document.getElementById('copyShareUrl');
+          copyBtn.textContent = 'Copied!';
+          copyBtn.classList.add('copied');
+          
+          setTimeout(() => {
+            copyBtn.textContent = 'Copy';
+            copyBtn.classList.remove('copied');
+          }, 2000);
+          
+          showNotification('Route URL copied to clipboard');
+        })
+        .catch(err => {
+          console.error('Failed to copy: ', err);
+          showNotification('Failed to copy URL', 'error');
+        });
+    }
+
+    function shareViaWhatsApp() {
+      const shareUrl = generateShareUrl();
+      const message = `Check out this route in West Bengal: ${shareUrl}`;
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+      closeShareModal();
+    }
+
+    function shareViaFacebook() {
+      const shareUrl = generateShareUrl();
+      const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+      window.open(facebookUrl, '_blank');
+      closeShareModal();
+    }
+
+    function shareViaTwitter() {
+      const shareUrl = generateShareUrl();
+      const message = `Check out this route in West Bengal`;
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}&url=${encodeURIComponent(shareUrl)}`;
+      window.open(twitterUrl, '_blank');
+      closeShareModal();
+    }
+
+    // Entrance animation for map
+    document.getElementById('map').style.opacity = 0;
+    setTimeout(()=>{
+      document.getElementById('map').style.transition='opacity 800ms ease';
+      document.getElementById('map').style.opacity=1;
+    },350);
+
+    // Load district boundaries after a short delay
+    setTimeout(() => {
+      loadDistrictBoundaries();
+    }, 1000);
+
+    // Initialize routing
+    initRouting();
+
+    // Make functions available globally for popup buttons
+    window.filterByDistrict = filterByDistrict;
+    window.handleImageError = handleImageError;
+    window.setAsDestination = setAsDestination;
+  </script>
+</body>
+</html>
